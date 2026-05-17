@@ -19,7 +19,14 @@
 #include "KWinVirtualKeyboard.h"
 #include "utils.h"
 #include <kwin/wayland/seat.h>
+
+#if __has_include(<kwin/wayland/textinput_v1.h>)
 #include <kwin/wayland/textinput_v1.h>
+#define INPUTACTIONS_HAVE_KWIN_TEXTINPUT_V1 1
+#else
+#define INPUTACTIONS_HAVE_KWIN_TEXTINPUT_V1 0
+#endif
+
 #include <kwin/wayland/textinput_v2.h>
 #include <kwin/wayland/textinput_v3.h>
 #include <kwin/wayland_server.h>
@@ -52,7 +59,6 @@ void KWinVirtualKeyboard::keyboardKey(KeyboardKey key, bool state)
 void KWinVirtualKeyboard::keyboardText(const QString &text)
 {
     auto *seat = KWin::waylandServer()->seat();
-    auto *v1 = seat->textInputV1();
     auto *v2 = seat->textInputV2();
     auto *v3 = seat->textInputV3();
 
@@ -64,10 +70,12 @@ void KWinVirtualKeyboard::keyboardText(const QString &text)
         v2->commitString(text);
         v2->setPreEditCursor(0);
         v2->preEdit({}, {});
-    } else if (v1->isEnabled()) {
+#if INPUTACTIONS_HAVE_KWIN_TEXTINPUT_V1
+    } else if (auto *v1 = seat->textInputV1(); v1 && v1->isEnabled()) {
         v1->commitString(text);
         v1->setPreEditCursor(0);
         v1->preEdit({}, {});
+#endif
     }
 }
 
